@@ -46,7 +46,11 @@ const App = (() => {
 
   // ---- Theme ----
   function initTheme() {
-    const theme = DB.getSetting('theme', 'dark');
+    if (!DB.getSetting('themeMigratedToLightDefault', false)) {
+      DB.setSetting('theme', 'light');
+      DB.setSetting('themeMigratedToLightDefault', true);
+    }
+    const theme = DB.getSetting('theme', 'light');
     applyTheme(theme);
   }
 
@@ -60,6 +64,61 @@ const App = (() => {
   function toggleTheme() {
     const current = document.documentElement.getAttribute('data-theme');
     applyTheme(current === 'dark' ? 'light' : 'dark');
+  }
+
+  // ---- Music Background Player ----
+  function initMusic() {
+    const audio = document.getElementById('bgAudio');
+    const playPauseBtn = document.getElementById('playPauseBtn');
+    const trackSelect = document.getElementById('musicTrackSelect');
+    const volumeSlider = document.getElementById('musicVolume');
+
+    if (!audio || !playPauseBtn || !trackSelect || !volumeSlider) return;
+
+    audio.src = trackSelect.value;
+    audio.volume = parseFloat(volumeSlider.value);
+
+    playPauseBtn.addEventListener('click', () => {
+      if (audio.paused) {
+        audio.play().then(() => {
+          updatePlayPauseState(true);
+        }).catch(err => {
+          showToast('Click để tương tác với trang trước khi phát nhạc.', 'warning');
+          console.error(err);
+        });
+      } else {
+        audio.pause();
+        updatePlayPauseState(false);
+      }
+    });
+
+    trackSelect.addEventListener('change', () => {
+      const wasPlaying = !audio.paused;
+      audio.src = trackSelect.value;
+      if (wasPlaying) {
+        audio.play().then(() => {
+          updatePlayPauseState(true);
+        });
+      }
+    });
+
+    volumeSlider.addEventListener('input', () => {
+      audio.volume = parseFloat(volumeSlider.value);
+    });
+
+    function updatePlayPauseState(isPlaying) {
+      const playIcon = playPauseBtn.querySelector('.icon-play');
+      const pauseIcon = playPauseBtn.querySelector('.icon-pause');
+      if (isPlaying) {
+        playIcon.style.display = 'none';
+        pauseIcon.style.display = 'block';
+        playPauseBtn.classList.add('pulse');
+      } else {
+        playIcon.style.display = 'block';
+        pauseIcon.style.display = 'none';
+        playPauseBtn.classList.remove('pulse');
+      }
+    }
   }
 
   // ---- Sidebar ----
@@ -129,6 +188,7 @@ const App = (() => {
   // ---- Init all modules ----
   function init() {
     initTheme();
+    initMusic();
     initSidebar();
     initQuickAdd();
     initSearch();
