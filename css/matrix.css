@@ -1,0 +1,138 @@
+/* ===================================================
+   MATRIX (EISENHOWER) STYLES
+   =================================================== */
+
+
+.matrix-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.matrix-desc { font-size: 14px; color: var(--text-secondary); }
+.matrix-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.matrix-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 14px;
+  position: relative;
+  min-height: 400px;
+}
+
+.matrix-axis-label {
+  position: absolute;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  pointer-events: none;
+}
+
+.axis-y {
+  left: -10px;
+  top: 50%;
+  transform: translateX(-50%) translateY(-50%) rotate(-90deg);
+  white-space: nowrap;
+}
+
+.axis-x {
+  bottom: -24px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.matrix-quadrant {
+  border-radius: var(--r-xl);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border: 1px solid var(--border);
+  transition: box-shadow var(--tr);
+  overflow: hidden;
+  position: relative;
+}
+.matrix-quadrant:hover { box-shadow: var(--shadow-md); }
+.matrix-quadrant.drag-over { outline: 2px dashed var(--accent); }
+
+/* Quadrant colors */
+.q1 {
+  background: linear-gradient(135deg, rgba(239,68,68,.08) 0%, rgba(239,68,68,.03) 100%);
+  border-color: rgba(239,68,68,.2);
+}
+.q2 {
+  background: linear-gradient(135deg, rgba(99,102,241,.08) 0%, rgba(99,102,241,.03) 100%);
+  border-color: rgba(99,102,241,.2);
+}
+.q3 {
+  background: linear-gradient(135deg, rgba(245,158,11,.08) 0%, rgba(245,158,11,.03) 100%);
+  border-color: rgba(245,158,11,.2);
+}
+.q4 {
+  background: linear-gradient(135deg, rgba(148,163,184,.08) 0%, rgba(148,163,184,.03) 100%);
+  border-color: rgba(148,163,184,.2);
+}
+
+.quadrant-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-light);
+}
+.quadrant-icon { font-size: 22px; flex-shrink: 0; }
+.quadrant-header h4 { font-size: 15px; font-weight: 800; flex: 1; }
+.quadrant-header p  { font-size: 11px; color: var(--text-secondary); }
+.quadrant-count {
+  font-size: 13px;
+  font-weight: 800;
+  background: var(--bg-surface);
+  border-radius: var(--r-full);
+  padding: 1px 10px;
+  color: var(--text-secondary);
+}
+
+.quadrant-items { display: flex; flex-direction: column; gap: 6px; overflow-y: auto; max-height: 220px; }
+
+.matrix-item {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: box-shadow var(--tr), transform var(--tr);
+  font-size: 13px;
+  font-weight: 500;
+}
+.matrix-item:hover { box-shadow: var(--shadow-sm); transform: translateY(-1px); }
+.matrix-item-color {
+  width: 4px;
+  height: 28px;
+  border-radius: var(--r-full);
+  flex-shrink: 0;
+}
+.matrix-item-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Responsive */
+@media (max-width: 760px) {
+  .matrix-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(4, auto);
+  }
+  .axis-y, .axis-x { display: none; }
+}

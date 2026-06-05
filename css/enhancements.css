@@ -1,0 +1,399 @@
+/* ===================================================
+   TASKFLOW – ENHANCEMENTS
+   Extra polish, project detail panel, kanban scroll,
+   stats ring, shimmer, micro-animations
+   =================================================== */
+
+/* ---- Kanban horizontal scroll (mobile/tablet) ---- */
+.kanban-board {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x mandatory;
+  padding-bottom: 12px;
+}
+.kanban-col {
+  scroll-snap-align: start;
+  min-width: 240px;
+}
+
+/* ---- Project list "click to expand" detail ---- */
+.project-item {
+  flex-direction: column;
+  align-items: stretch;
+  padding: 0;
+  cursor: default;
+}
+.project-item-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 20px;
+  cursor: pointer;
+  border-radius: inherit;
+  transition: background var(--tr);
+}
+.project-item-header:hover {
+  background: var(--bg-hover);
+}
+.project-item-body {
+  display: none;
+  padding: 0 20px 16px 20px;
+  border-top: 1px solid var(--border-light);
+  animation: slideDown 0.2s ease;
+}
+.project-item.expanded .project-item-body {
+  display: block;
+}
+.project-item.expanded .project-chevron {
+  transform: rotate(180deg);
+}
+.project-chevron {
+  transition: transform var(--tr);
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Task mini list inside project */
+.project-tasks-mini {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.proj-task-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--bg-elevated);
+  border-radius: var(--r-md);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background var(--tr);
+}
+.proj-task-row:hover { background: var(--bg-hover); }
+.proj-task-check {
+  width: 15px; height: 15px;
+  border: 2px solid var(--border);
+  border-radius: 4px;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.proj-task-check.done {
+  background: var(--success);
+  border-color: var(--success);
+}
+.proj-task-check.done::after {
+  content: '✓';
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+}
+.proj-task-name { flex: 1; }
+.proj-task-name.done { text-decoration: line-through; color: var(--text-muted); }
+.proj-add-task-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 7px 10px;
+  background: none;
+  border: 1px dashed var(--border);
+  border-radius: var(--r-md);
+  color: var(--text-muted);
+  font-size: 13px;
+  cursor: pointer;
+  width: 100%;
+  transition: border-color var(--tr), color var(--tr), background var(--tr);
+}
+.proj-add-task-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-glow);
+}
+
+/* ---- Stat cards with gradient glow ---- */
+.stat-card {
+  position: relative;
+  overflow: hidden;
+}
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: -30px; right: -30px;
+  width: 80px; height: 80px;
+  border-radius: 50%;
+  opacity: 0.08;
+  transition: transform 0.4s ease, opacity 0.4s ease;
+}
+.stat-card:hover::before {
+  transform: scale(1.4);
+  opacity: 0.14;
+}
+.stat-card:nth-child(1)::before { background: #6366f1; }
+.stat-card:nth-child(2)::before { background: #3b82f6; }
+.stat-card:nth-child(3)::before { background: #10b981; }
+.stat-card:nth-child(4)::before { background: #f59e0b; }
+
+/* ---- Progress ring for dashboard ---- */
+.ring-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+.progress-ring {
+  transform: rotate(-90deg);
+}
+.progress-ring-bg {
+  fill: none;
+  stroke: var(--bg-elevated);
+  stroke-width: 4;
+}
+.progress-ring-fill {
+  fill: none;
+  stroke-width: 4;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.7s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* ---- Kanban drop zone indicator ---- */
+.kanban-drop-indicator {
+  height: 3px;
+  background: var(--accent);
+  border-radius: var(--r-full);
+  margin: 4px 0;
+  display: none;
+}
+.kanban-cards.drag-over-col .kanban-drop-indicator {
+  display: block;
+}
+
+/* ---- Tag chips in task ---- */
+.task-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--r-full);
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+
+/* ---- Skeleton loader ---- */
+.skeleton {
+  background: linear-gradient(90deg,
+    var(--bg-elevated) 25%,
+    var(--bg-hover) 50%,
+    var(--bg-elevated) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--r-md);
+}
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ---- Badge counts on nav items ---- */
+.nav-badge {
+  margin-left: auto;
+  background: var(--accent);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: var(--r-full);
+  padding: 1px 6px;
+  min-width: 18px;
+  text-align: center;
+  line-height: 16px;
+}
+.sidebar.collapsed .nav-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
+  min-width: 0;
+  padding: 0;
+  font-size: 0;
+  border-radius: 50%;
+}
+
+/* ---- Task estimate chip ---- */
+.estimate-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+  padding: 2px 8px;
+  border-radius: var(--r-full);
+  border: 1px solid var(--border-light);
+}
+
+/* ---- Floating action pulse ---- */
+@keyframes pulse-ring {
+  0%   { box-shadow: 0 0 0 0 var(--accent-glow); }
+  70%  { box-shadow: 0 0 0 8px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+.btn-primary.pulse {
+  animation: pulse-ring 2s infinite;
+}
+
+/* ---- Search results overlay ---- */
+.search-results {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-xl);
+  z-index: 500;
+  max-height: 320px;
+  overflow-y: auto;
+  display: none;
+}
+.search-results.active { display: block; }
+.search-result-section { padding: 10px 14px 4px; }
+.search-result-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.search-result-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--r-md);
+  cursor: pointer;
+  font-size: 13px;
+  transition: background var(--tr);
+}
+.search-result-item:hover { background: var(--bg-hover); }
+.search-result-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ---- Quick stats bar (inside project expand) ---- */
+.proj-stat-bar {
+  display: flex;
+  gap: 16px;
+  margin: 12px 0 8px;
+  padding: 10px 14px;
+  background: var(--bg-elevated);
+  border-radius: var(--r-md);
+  font-size: 12px;
+}
+.proj-stat-item { display: flex; flex-direction: column; gap: 2px; align-items: center; }
+.proj-stat-num  { font-size: 16px; font-weight: 800; }
+.proj-stat-lbl  { color: var(--text-muted); }
+
+/* ---- View transition ---- */
+.view {
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  transform: translateY(4px);
+}
+.view.active {
+  transform: translateY(0);
+}
+
+/* ---- Members view improvements ---- */
+.members-grid {
+  grid-auto-rows: auto;
+}
+.member-projects-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 8px;
+  justify-content: center;
+}
+.member-proj-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: var(--r-full);
+  font-size: 11px;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+.member-proj-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ---- Overdue highlight ---- */
+.task-item.is-overdue {
+  border-left: 3px solid var(--danger);
+}
+.project-item.is-overdue .project-item-header {
+  border-left: 3px solid var(--danger);
+  border-radius: var(--r-lg) 0 0 var(--r-lg);
+}
+
+/* ---- Calendar task count badge ---- */
+.cal-day-count {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  border-radius: 50%;
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ---- Tooltip ---- */
+[title] { position: relative; }
+
+/* ---- Modal backdrop blur stronger on mobile ---- */
+@media (max-width: 640px) {
+  .modal-overlay { backdrop-filter: blur(8px); }
+  .modal { margin: 0 4px; border-radius: var(--r-lg); }
+
+  /* Stack topbar right items */
+  .topbar { gap: 8px; }
+  .topbar-right { gap: 8px; }
+
+  /* Kanban full width scroll */
+  .kanban-board {
+    display: flex;
+    gap: 12px;
+  }
+  .kanban-col {
+    flex: 0 0 76vw;
+  }
+}
+
+/* ---- Print friendly ---- */
+@media print {
+  .sidebar, .topbar, .modal-overlay, .toast-container { display: none !important; }
+  .main-content { width: 100%; }
+  .view { position: static; opacity: 1; pointer-events: all; padding: 0; }
+}
