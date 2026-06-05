@@ -11,6 +11,7 @@ const App = (() => {
     matrix:    { title: 'Ma trận Eisenhower', render: () => Matrix.render()   },
     calendar:  { title: 'Lịch',        render: () => Calendar.render()  },
     members:   { title: 'Thành viên',  render: () => Members.render()   },
+    tags:      { title: 'Quản lý thẻ', render: () => TagsMng.render()   },
   };
 
   let currentView = 'dashboard';
@@ -150,6 +151,7 @@ const App = (() => {
     Matrix.init();
     Calendar.init();
     Members.init();
+    TagsMng.init();
 
     // Load seed data if first time
     if (!DB.getProjects().length && !DB.getTasks().length) {
@@ -162,30 +164,36 @@ const App = (() => {
 
   // ---- Seed data ----
   function loadSeedData() {
-    // Sample member
-    const m1 = DB.addMember({ id: uid(), name: 'Nguyễn Văn An', role: 'Trưởng nhóm', email: 'an@company.vn', color: '#6366f1', createdAt: Date.now() });
-    const m2 = DB.addMember({ id: uid(), name: 'Trần Thị Bích', role: 'Designer',    email: 'bich@company.vn', color: '#ec4899', createdAt: Date.now() });
-    const m3 = DB.addMember({ id: uid(), name: 'Lê Minh Cường', role: 'Developer',   email: 'cuong@company.vn', color: '#10b981', createdAt: Date.now() });
+    // Sample tags
+    const tag1 = DB.addTag({ id: uid(), name: 'Quan trọng', color: '#ef4444' });
+    const tag2 = DB.addTag({ id: uid(), name: 'Họp hành',   color: '#f59e0b' });
+    const tag3 = DB.addTag({ id: uid(), name: 'Thiết kế',   color: '#ec4899' });
+    const tag4 = DB.addTag({ id: uid(), name: 'Lập trình',  color: '#3b82f6' });
+
+    // Sample members
+    const m1 = DB.addMember({ id: uid(), name: 'Nguyễn Văn An', role: 'Trưởng nhóm', department: 'Ban Giám Đốc', email: 'an@company.vn', color: '#6366f1', createdAt: Date.now() });
+    const m2 = DB.addMember({ id: uid(), name: 'Trần Thị Bích', role: 'Designer',    department: 'Thiết kế',     email: 'bich@company.vn', color: '#ec4899', createdAt: Date.now() });
+    const m3 = DB.addMember({ id: uid(), name: 'Lê Minh Cường', role: 'Developer',   department: 'Kỹ thuật',     email: 'cuong@company.vn', color: '#10b981', createdAt: Date.now() });
 
     // Sample projects
     const today = new Date();
     const fmtISO = (d) => d.toISOString().slice(0, 10);
     const inDays = (n) => { const d = new Date(today); d.setDate(d.getDate() + n); return fmtISO(d); };
 
-    const p1 = DB.addProject({ id: uid(), name: 'Ra mắt sản phẩm mới', desc: 'Dự án ra mắt phiên bản 2.0', status: 'inprogress', priority: 'urgent-important', color: '#6366f1', startDate: fmtISO(today), endDate: inDays(14), memberIds: [m1.id, m2.id, m3.id], createdAt: Date.now() });
-    const p2 = DB.addProject({ id: uid(), name: 'Cải thiện UX/UI',      desc: 'Nâng cấp giao diện người dùng', status: 'todo', priority: 'important', color: '#ec4899', startDate: inDays(7), endDate: inDays(30), memberIds: [m2.id], createdAt: Date.now() });
-    const p3 = DB.addProject({ id: uid(), name: 'Tối ưu hiệu suất',     desc: 'Cải thiện tốc độ tải trang', status: 'todo', priority: 'important', color: '#10b981', startDate: inDays(14), endDate: inDays(45), memberIds: [m3.id], createdAt: Date.now() });
-    const p4 = DB.addProject({ id: uid(), name: 'Họp đối tác Q3',       desc: 'Chuẩn bị tài liệu họp', status: 'todo', priority: 'urgent', color: '#f59e0b', startDate: fmtISO(today), endDate: inDays(3), memberIds: [m1.id], createdAt: Date.now() });
+    const p1 = DB.addProject({ id: uid(), name: 'Ra mắt sản phẩm mới', desc: 'Dự án ra mắt phiên bản 2.0', department: 'Kỹ thuật', status: 'inprogress', priority: 'urgent-important', color: '#6366f1', startDate: fmtISO(today), endDate: inDays(14), memberIds: [m1.id, m2.id, m3.id], tagIds: [tag1.id], createdAt: Date.now() });
+    const p2 = DB.addProject({ id: uid(), name: 'Cải thiện UX/UI',      desc: 'Nâng cấp giao diện người dùng', department: 'Thiết kế', status: 'todo', priority: 'important', color: '#ec4899', startDate: inDays(7), endDate: inDays(30), memberIds: [m2.id], tagIds: [tag3.id], createdAt: Date.now() });
+    const p3 = DB.addProject({ id: uid(), name: 'Tối ưu hiệu suất',     desc: 'Cải thiện tốc độ tải trang', department: 'Kỹ thuật', status: 'todo', priority: 'important', color: '#10b981', startDate: inDays(14), endDate: inDays(45), memberIds: [m3.id], tagIds: [tag4.id], createdAt: Date.now() });
+    const p4 = DB.addProject({ id: uid(), name: 'Họp đối tác Q3',       desc: 'Chuẩn bị tài liệu họp', department: 'Ban Giám Đốc', status: 'todo', priority: 'urgent', color: '#f59e0b', startDate: fmtISO(today), endDate: inDays(3), memberIds: [m1.id], tagIds: [tag2.id], createdAt: Date.now() });
 
     // Sample tasks
-    DB.addTask({ id: uid(), name: 'Thiết kế mockup landing page', projectId: p1.id, assigneeId: m2.id, status: 'done',       priority: 'urgent-important', dueDate: inDays(-2), estimate: 8,  createdAt: Date.now() - 86400000*3 });
-    DB.addTask({ id: uid(), name: 'Viết copy nội dung trang chủ', projectId: p1.id, assigneeId: m1.id, status: 'inprogress', priority: 'urgent-important', dueDate: inDays(1),  estimate: 4,  createdAt: Date.now() - 86400000*2 });
-    DB.addTask({ id: uid(), name: 'Tích hợp API thanh toán',      projectId: p1.id, assigneeId: m3.id, status: 'todo',       priority: 'urgent-important', dueDate: inDays(3),  estimate: 12, createdAt: Date.now() - 86400000*1 });
-    DB.addTask({ id: uid(), name: 'Kiểm tra đa trình duyệt',      projectId: p1.id, assigneeId: m3.id, status: 'todo',       priority: 'important',       dueDate: inDays(5),  estimate: 6,  createdAt: Date.now() });
-    DB.addTask({ id: uid(), name: 'Nghiên cứu người dùng',        projectId: p2.id, assigneeId: m2.id, status: 'inprogress', priority: 'important',       dueDate: inDays(7),  estimate: 16, createdAt: Date.now() - 86400000*1 });
-    DB.addTask({ id: uid(), name: 'Phân tích hiệu suất hiện tại', projectId: p3.id, assigneeId: m3.id, status: 'todo',       priority: 'important',       dueDate: inDays(10), estimate: 5,  createdAt: Date.now() });
-    DB.addTask({ id: uid(), name: 'Chuẩn bị slide họp',           projectId: p4.id, assigneeId: m1.id, status: 'inprogress', priority: 'urgent',          dueDate: inDays(2),  estimate: 3,  createdAt: Date.now() });
-    DB.addTask({ id: uid(), name: 'Gửi email xác nhận lịch họp',  projectId: p4.id, assigneeId: m1.id, status: 'done',       priority: 'urgent',          dueDate: inDays(-1), estimate: 0.5,createdAt: Date.now() - 86400000*2 });
+    DB.addTask({ id: uid(), name: 'Thiết kế mockup landing page', projectId: p1.id, assigneeId: m2.id, status: 'done',       priority: 'urgent-important', dueDate: inDays(-2), estimate: 8,   tagIds: [tag3.id], createdAt: Date.now() - 86400000*3 });
+    DB.addTask({ id: uid(), name: 'Viết copy nội dung trang chủ', projectId: p1.id, assigneeId: m1.id, status: 'inprogress', priority: 'urgent-important', dueDate: inDays(1),  estimate: 4,   tagIds: [tag1.id], createdAt: Date.now() - 86400000*2 });
+    DB.addTask({ id: uid(), name: 'Tích hợp API thanh toán',      projectId: p1.id, assigneeId: m3.id, status: 'todo',       priority: 'urgent-important', dueDate: inDays(3),  estimate: 12,  tagIds: [tag4.id], createdAt: Date.now() - 86400000*1 });
+    DB.addTask({ id: uid(), name: 'Kiểm tra đa trình duyệt',      projectId: p1.id, assigneeId: m3.id, status: 'todo',       priority: 'important',       dueDate: inDays(5),  estimate: 6,   tagIds: [],        createdAt: Date.now() });
+    DB.addTask({ id: uid(), name: 'Nghiên cứu người dùng',        projectId: p2.id, assigneeId: m2.id, status: 'inprogress', priority: 'important',       dueDate: inDays(7),  estimate: 16,  tagIds: [tag3.id], createdAt: Date.now() - 86400000*1 });
+    DB.addTask({ id: uid(), name: 'Phân tích hiệu suất hiện tại', projectId: p3.id, assigneeId: m3.id, status: 'todo',       priority: 'important',       dueDate: inDays(10), estimate: 5,   tagIds: [tag4.id], createdAt: Date.now() });
+    DB.addTask({ id: uid(), name: 'Chuẩn bị slide họp',           projectId: p4.id, assigneeId: m1.id, status: 'inprogress', priority: 'urgent',          dueDate: inDays(2),  estimate: 3,   tagIds: [tag2.id], createdAt: Date.now() });
+    DB.addTask({ id: uid(), name: 'Gửi email xác nhận lịch họp',  projectId: p4.id, assigneeId: m1.id, status: 'done',       priority: 'urgent',          dueDate: inDays(-1), estimate: 0.5, tagIds: [tag2.id], createdAt: Date.now() - 86400000*2 });
   }
 
   return { init, switchView };

@@ -11,16 +11,22 @@ const Members = (() => {
     const members   = DB.getMembers();
     const tasks     = DB.getTasks();
 
-    if (!members.length) {
+    const filterDept = document.getElementById('memberFilterDepartment').value;
+    let filtered = members;
+    if (filterDept) {
+      filtered = filtered.filter(m => m.department === filterDept);
+    }
+
+    if (!filtered.length) {
       container.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
         <div class="empty-icon">👥</div>
-        <h3>Chưa có thành viên nào</h3>
-        <p>Thêm thành viên để phân công công việc</p>
+        <h3>Không tìm thấy thành viên</h3>
+        <p>Thử thay đổi bộ lọc phòng ban</p>
       </div>`;
       return;
     }
 
-    container.innerHTML = members.map(m => {
+    container.innerHTML = filtered.map(m => {
       const memberTasks = tasks.filter(t => t.assigneeId === m.id);
       const doneTasks   = memberTasks.filter(t => t.status === 'done').length;
       const projects    = DB.getProjects().filter(p => (p.memberIds || []).includes(m.id));
@@ -38,6 +44,7 @@ const Members = (() => {
         <div class="member-avatar-xl" style="background:${m.color || '#6366f1'}">${initials(m.name)}</div>
         <div class="member-name">${m.name}</div>
         ${m.role  ? `<div class="member-role">${m.role}</div>`   : ''}
+        ${m.department ? `<div class="member-dept-badge">${m.department}</div>` : ''}
         ${m.email ? `<div class="member-email">${m.email}</div>` : ''}
         <div class="member-stats">
           <div class="member-stat">
@@ -78,6 +85,7 @@ const Members = (() => {
     document.getElementById('memberName').value  = '';
     document.getElementById('memberEmail').value = '';
     document.getElementById('memberRole').value  = '';
+    document.getElementById('memberDepartment').value = '';
     selectedColor = '#6366f1';
     updateColorPicker('#memberColorPicker', selectedColor);
     document.getElementById('memberColor').value = selectedColor;
@@ -94,6 +102,7 @@ const Members = (() => {
     document.getElementById('memberName').value  = m.name;
     document.getElementById('memberEmail').value = m.email || '';
     document.getElementById('memberRole').value  = m.role  || '';
+    document.getElementById('memberDepartment').value = m.department || '';
     selectedColor = m.color || '#6366f1';
     updateColorPicker('#memberColorPicker', selectedColor);
     document.getElementById('memberColor').value = selectedColor;
@@ -108,6 +117,7 @@ const Members = (() => {
       name,
       email: document.getElementById('memberEmail').value.trim(),
       role:  document.getElementById('memberRole').value.trim(),
+      department: document.getElementById('memberDepartment').value.trim(),
       color: document.getElementById('memberColor').value,
     };
 
@@ -160,6 +170,11 @@ const Members = (() => {
       document.getElementById('memberColor').value = selectedColor;
       updateColorPicker('#memberColorPicker', selectedColor);
     });
+
+    const memDeptSel = document.getElementById('memberFilterDepartment');
+    if (memDeptSel) {
+      memDeptSel.addEventListener('change', render);
+    }
   }
 
   return { init, render, openAdd };

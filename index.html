@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="vi" data-theme="dark">
+<html lang="vi" data-theme="light">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -52,13 +52,17 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         <span>Thành viên</span>
       </a>
+      <a href="#" class="nav-item" data-view="tags" id="nav-tags">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+        <span>Quản lý thẻ</span>
+      </a>
     </nav>
 
     <div class="sidebar-footer">
       <button class="theme-toggle" id="themeToggle" title="Chuyển đổi giao diện">
         <svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
         <svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-        <span class="theme-label">Giao diện sáng</span>
+        <span class="theme-label">Giao diện tối</span>
       </button>
     </div>
   </aside>
@@ -181,10 +185,15 @@
               Kanban
             </button>
           </div>
-          <button class="btn-primary" id="addProjectBtn">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Thêm dự án
-          </button>
+          <div style="display:flex;gap:10px;align-items:center;">
+            <select id="projectFilterDepartment" class="filter-select">
+              <option value="">Tất cả phòng ban</option>
+            </select>
+            <button class="btn-primary" id="addProjectBtn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Thêm dự án
+            </button>
+          </div>
         </div>
 
         <!-- Project List Tab -->
@@ -244,12 +253,20 @@
             <select id="taskFilterProject" class="filter-select">
               <option value="">Tất cả dự án</option>
             </select>
+            <select id="taskFilterDepartment" class="filter-select">
+              <option value="">Tất cả phòng ban</option>
+            </select>
             <select id="taskFilterStatus" class="filter-select">
               <option value="">Tất cả trạng thái</option>
               <option value="todo">Chờ thực hiện</option>
               <option value="inprogress">Đang thực hiện</option>
               <option value="review">Đang xem xét</option>
               <option value="done">Hoàn thành</option>
+            </select>
+            <select id="taskFilterCompletion" class="filter-select">
+              <option value="">Tình trạng</option>
+              <option value="active">Đang làm dở</option>
+              <option value="done">Đã hoàn thành</option>
             </select>
             <select id="taskFilterPriority" class="filter-select">
               <option value="">Tất cả ưu tiên</option>
@@ -422,7 +439,11 @@
       <!-- Members View -->
       <section class="view" id="view-members">
         <div class="view-header">
-          <div></div>
+          <div class="member-filters">
+            <select id="memberFilterDepartment" class="filter-select">
+              <option value="">Tất cả phòng ban</option>
+            </select>
+          </div>
           <button class="btn-primary" id="addMemberBtn">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Thêm thành viên
@@ -433,6 +454,37 @@
             <div class="empty-icon">👥</div>
             <h3>Chưa có thành viên nào</h3>
             <p>Thêm thành viên để phân công công việc</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tags View -->
+      <section class="view" id="view-tags">
+        <div class="view-header">
+          <div></div>
+        </div>
+        <div class="tags-layout-container">
+          <div class="tags-form-card">
+            <h3 id="tagFormTitle">Tạo thẻ mới</h3>
+            <div class="form-group">
+              <label for="tagName">Tên thẻ *</label>
+              <input type="text" id="tagName" placeholder="VD: Khẩn cấp, Thiết kế..." />
+            </div>
+            <div class="form-group">
+              <label>Màu sắc</label>
+              <div class="color-picker" id="tagColorPicker"></div>
+              <input type="hidden" id="tagColor" value="#6366f1" />
+            </div>
+            <div style="display:flex;gap:10px;margin-top:16px;">
+              <button class="btn-primary" id="saveTagBtn" style="flex:1">Lưu thẻ</button>
+              <button class="btn-ghost" id="cancelTagBtn" style="display:none;flex:1">Hủy</button>
+            </div>
+          </div>
+          <div class="tags-list-card">
+            <h3>Danh sách thẻ</h3>
+            <div class="tag-grid" id="tagListContainer">
+              <!-- Loaded dynamically -->
+            </div>
           </div>
         </div>
       </section>
@@ -460,6 +512,10 @@
         <div class="form-group">
           <label for="projectDesc">Mô tả</label>
           <textarea id="projectDesc" placeholder="Mô tả dự án..." rows="3"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="projectDepartment">Phòng ban</label>
+          <input type="text" id="projectDepartment" list="departmentList" placeholder="Nhập hoặc chọn phòng ban..." />
         </div>
         <div class="form-row">
           <div class="form-group">
@@ -504,6 +560,12 @@
             <div class="color-swatch" data-color="#06b6d4" style="background:#06b6d4"></div>
           </div>
           <input type="hidden" id="projectColor" value="#6366f1" />
+        </div>
+        <div class="form-group">
+          <label>Thẻ (Tags)</label>
+          <div class="tag-checkboxes" id="projectTagCheckboxes">
+            <div class="empty-state-mini">Chưa có thẻ. Tạo thẻ trong mục Quản lý thẻ.</div>
+          </div>
         </div>
         <div class="form-group">
           <label>Thành viên</label>
@@ -582,6 +644,12 @@
             <input type="number" id="taskEstimate" placeholder="0" min="0" step="0.5" />
           </div>
         </div>
+        <div class="form-group">
+          <label>Thẻ (Tags)</label>
+          <div class="tag-checkboxes" id="taskTagCheckboxes">
+            <div class="empty-state-mini">Chưa có thẻ. Tạo thẻ trong mục Quản lý thẻ.</div>
+          </div>
+        </div>
       </div>
       <div class="modal-footer">
         <button class="btn-ghost" id="cancelTaskModal">Hủy</button>
@@ -612,6 +680,10 @@
         <div class="form-group">
           <label for="memberRole">Vai trò</label>
           <input type="text" id="memberRole" placeholder="VD: Developer, Designer..." />
+        </div>
+        <div class="form-group">
+          <label for="memberDepartment">Phòng ban</label>
+          <input type="text" id="memberDepartment" list="departmentList" placeholder="Nhập hoặc chọn phòng ban..." />
         </div>
         <div class="form-group">
           <label for="memberAvatar">Màu avatar</label>
@@ -657,8 +729,19 @@
   <!-- Toast Notification -->
   <div class="toast-container" id="toastContainer"></div>
 
+  <datalist id="departmentList">
+    <option value="Ban Giám Đốc"></option>
+    <option value="Kỹ thuật"></option>
+    <option value="Kinh doanh"></option>
+    <option value="Marketing"></option>
+    <option value="Thiết kế"></option>
+    <option value="Nhân sự"></option>
+    <option value="Tài chính"></option>
+  </datalist>
+
   <script src="js/data.js"></script>
   <script src="js/utils.js"></script>
+  <script src="js/tags.js"></script>
   <script src="js/projects.js"></script>
   <script src="js/tasks.js"></script>
   <script src="js/matrix.js"></script>

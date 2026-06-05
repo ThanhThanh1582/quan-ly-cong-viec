@@ -8,6 +8,7 @@ const DB = {
     tasks:    'tf_tasks',
     members:  'tf_members',
     settings: 'tf_settings',
+    tags:     'tf_tags',
   },
 
   load(key) {
@@ -116,8 +117,47 @@ const DB = {
     this.saveProjects(projects);
   },
 
+  // ---- Tags ----
+  getTags()        { return this.load('tags') || []; },
+  saveTags(list)   { this.save('tags', list); },
+
+  addTag(tag) {
+    const list = this.getTags();
+    list.push(tag);
+    this.saveTags(list);
+    return tag;
+  },
+
+  updateTag(id, changes) {
+    const list = this.getTags();
+    const idx = list.findIndex(t => t.id === id);
+    if (idx === -1) return null;
+    list[idx] = { ...list[idx], ...changes };
+    this.saveTags(list);
+    return list[idx];
+  },
+
+  deleteTag(id) {
+    let list = this.getTags().filter(t => t.id !== id);
+    this.saveTags(list);
+    // remove references from tasks
+    let tasks = this.getTasks();
+    tasks = tasks.map(t => ({
+      ...t,
+      tagIds: (t.tagIds || []).filter(tid => tid !== id)
+    }));
+    this.saveTasks(tasks);
+    // remove references from projects
+    let projects = this.getProjects();
+    projects = projects.map(p => ({
+      ...p,
+      tagIds: (p.tagIds || []).filter(tid => tid !== id)
+    }));
+    this.saveProjects(projects);
+  },
+
   // ---- Settings ----
-  getSettings()      { return this.load('settings') || { theme: 'dark' }; },
+  getSettings()      { return this.load('settings') || { theme: 'light' }; },
   saveSettings(s)    { this.save('settings', s); },
   getSetting(key, def = null) { return this.getSettings()[key] ?? def; },
   setSetting(key, val) {

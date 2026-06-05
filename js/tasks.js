@@ -14,13 +14,23 @@ const Tasks = (() => {
 
   function getFiltered() {
     let tasks = DB.getTasks();
-    const filterProject  = document.getElementById('taskFilterProject').value;
-    const filterStatus   = document.getElementById('taskFilterStatus').value;
-    const filterPriority = document.getElementById('taskFilterPriority').value;
+    const filterProject    = document.getElementById('taskFilterProject').value;
+    const filterDept       = document.getElementById('taskFilterDepartment').value;
+    const filterStatus     = document.getElementById('taskFilterStatus').value;
+    const filterCompletion = document.getElementById('taskFilterCompletion').value;
+    const filterPriority   = document.getElementById('taskFilterPriority').value;
     const q = (document.getElementById('globalSearch').value || '').toLowerCase();
 
     if (filterProject)  tasks = tasks.filter(t => t.projectId === filterProject);
+    if (filterDept)     tasks = tasks.filter(t => t.projectId && getProjectById(t.projectId)?.department === filterDept);
     if (filterStatus)   tasks = tasks.filter(t => t.status === filterStatus);
+    if (filterCompletion) {
+      if (filterCompletion === 'active') {
+        tasks = tasks.filter(t => t.status !== 'done');
+      } else if (filterCompletion === 'done') {
+        tasks = tasks.filter(t => t.status === 'done');
+      }
+    }
     if (filterPriority) tasks = tasks.filter(t => t.priority === filterPriority);
     if (q)              tasks = tasks.filter(t => t.name.toLowerCase().includes(q) || (t.desc || '').toLowerCase().includes(q));
 
@@ -52,6 +62,9 @@ const Tasks = (() => {
     const overdue  = t.dueDate && isOverdue(t.dueDate) && t.status !== 'done';
     const highlighted = q ? highlightText(t.name, q) : t.name;
 
+    const tags = (t.tagIds || []).map(id => DB.getTags().find(tag => tag.id === id)).filter(Boolean);
+    const tagChipsHtml = tags.map(tag => `<span class="tag-chip" style="background:${tag.color}15;color:${tag.color};border-color:${tag.color}30">${tag.name}</span>`).join('');
+
     return `
     <div class="task-item" data-id="${t.id}" draggable="true">
       <div class="drag-handle">
@@ -66,6 +79,7 @@ const Tasks = (() => {
       <div class="task-name ${t.status === 'done' ? 'done' : ''}">${highlighted}</div>
       <div class="task-meta">
         ${project ? `<span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--text-secondary)"><span style="width:8px;height:8px;border-radius:50%;background:${project.color};display:inline-block"></span>${project.name}</span>` : ''}
+        ${tagChipsHtml ? `<div style="display:inline-flex;gap:4px;flex-wrap:wrap">${tagChipsHtml}</div>` : ''}
         ${statusBadge(t.status || 'todo')}
         ${priorityBadge(t.priority || 'low')}
         ${assignee ? memberAvatar(assignee) : ''}
@@ -121,11 +135,15 @@ const Tasks = (() => {
     const assignee = t.assigneeId ? getMemberById(t.assigneeId) : null;
     const overdue  = t.dueDate && isOverdue(t.dueDate) && t.status !== 'done';
 
+    const tags = (t.tagIds || []).map(id => DB.getTags().find(tag => tag.id === id)).filter(Boolean);
+    const tagChipsHtml = tags.map(tag => `<span class="tag-chip" style="background:${tag.color}15;color:${tag.color};border-color:${tag.color}30;font-size:10px;padding:1px 5px">${tag.name}</span>`).join('');
+
     return `
     <div class="kanban-card" data-id="${t.id}" draggable="true">
       <div class="kanban-card-bar" style="background:${project ? project.color : '#6366f1'}"></div>
       <div class="kanban-card-name">${t.name}</div>
       ${project ? `<div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">${project.name}</div>` : ''}
+      ${tagChipsHtml ? `<div style="display:flex;gap:3px;flex-wrap:wrap;margin-bottom:6px">${tagChipsHtml}</div>` : ''}
       <div class="kanban-card-footer">
         ${priorityBadge(t.priority || 'low')}
         <div style="display:flex;align-items:center;gap:6px">
@@ -229,6 +247,22 @@ const Tasks = (() => {
     if (val) sel.value = val;
   }
 
+  function buildTagCheckboxes(selectedIds = []) {
+    const container = document.getElementById('taskTagCheckboxes');
+    if (!container) return;
+    const tags = DB.getTags();
+    if (!tags.length) {
+      container.innerHTML = `<div class="empty-state-mini">Chưa có thẻ. Tạo thẻ trong mục Quản lý thẻ.</div>`;
+      return;
+    }
+    container.innerHTML = tags.map(tag => `
+      <label class="tag-checkbox-item">
+        <input type="checkbox" name="task-tags" value="${tag.id}" ${selectedIds.includes(tag.id) ? 'checked' : ''} />
+        <span class="tag-chip" style="background:${tag.color}15;color:${tag.color};border-color:${tag.color}30">${tag.name}</span>
+      </label>
+    `).join('');
+  }
+
   function openAdd(prefill = {}) {
     editingId = null;
     document.getElementById('taskModalTitle').textContent = 'Thêm công việc mới';
@@ -243,6 +277,7 @@ const Tasks = (() => {
     document.getElementById('taskAssignee').value = '';
     populateMemberSelect();
     Projects.updateFilterDropdowns();
+    buildTagCheckboxes(prefill.tagIds || []);
     if (prefill.projectId) document.getElementById('taskProject').value = prefill.projectId;
     openModal('taskModal');
     setTimeout(() => document.getElementById('taskName').focus(), 100);
@@ -264,12 +299,15 @@ const Tasks = (() => {
     Projects.updateFilterDropdowns();
     document.getElementById('taskProject').value = t.projectId || '';
     document.getElementById('taskAssignee').value = t.assigneeId || '';
+    buildTagCheckboxes(t.tagIds || []);
     openModal('taskModal');
   }
 
   function saveTask() {
     const name = document.getElementById('taskName').value.trim();
     if (!name) { showToast('Vui lòng nhập tên công việc!', 'error'); return; }
+
+    const tagIds = [...document.querySelectorAll('#taskTagCheckboxes input:checked')].map(i => i.value);
 
     const data = {
       name,
@@ -280,6 +318,7 @@ const Tasks = (() => {
       priority:   document.getElementById('taskPriority').value,
       dueDate:    document.getElementById('taskDueDate').value,
       estimate:   parseFloat(document.getElementById('taskEstimate').value) || 0,
+      tagIds,
     };
 
     if (editingId) {
@@ -322,7 +361,7 @@ const Tasks = (() => {
     document.getElementById('cancelTaskModal').addEventListener('click', () => closeModal('taskModal'));
 
     // Filters
-    ['taskFilterProject', 'taskFilterStatus', 'taskFilterPriority'].forEach(id => {
+    ['taskFilterProject', 'taskFilterDepartment', 'taskFilterStatus', 'taskFilterCompletion', 'taskFilterPriority'].forEach(id => {
       document.getElementById(id)?.addEventListener('change', render);
     });
 
@@ -340,5 +379,6 @@ const Tasks = (() => {
   }
 
   function openEditById(id) { openEdit(id); }
-  return { init, render, openAdd, openEditById, renderKanban };
+  function deleteTaskById(id) { confirmDelete(id); }
+  return { init, render, openAdd, openEditById, deleteTaskById, renderKanban };
 })();

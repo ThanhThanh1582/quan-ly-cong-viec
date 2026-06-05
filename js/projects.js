@@ -13,20 +13,27 @@ const Projects = (() => {
     updateFilterDropdowns();
   }
 
+  let expandedProjectIds = [];
+
   function renderList() {
     const list = document.getElementById('projectList');
     const projects = DB.getProjects();
     const q = (document.getElementById('globalSearch').value || '').toLowerCase();
+    const filterDept = document.getElementById('projectFilterDepartment').value;
 
-    const filtered = q
-      ? projects.filter(p => p.name.toLowerCase().includes(q) || (p.desc || '').toLowerCase().includes(q))
-      : projects;
+    let filtered = projects;
+    if (filterDept) {
+      filtered = filtered.filter(p => p.department === filterDept);
+    }
+    if (q) {
+      filtered = filtered.filter(p => p.name.toLowerCase().includes(q) || (p.desc || '').toLowerCase().includes(q));
+    }
 
     if (!filtered.length) {
       list.innerHTML = `<div class="empty-state">
         <div class="empty-icon">📁</div>
-        <h3>${q ? 'Không tìm thấy dự án' : 'Chưa có dự án nào'}</h3>
-        <p>${q ? 'Thử từ khóa khác' : 'Bấm nút "Thêm dự án" để bắt đầu'}</p>
+        <h3>${q || filterDept ? 'Không tìm thấy dự án' : 'Chưa có dự án nào'}</h3>
+        <p>${q || filterDept ? 'Thử thay đổi bộ lọc' : 'Bấm nút "Thêm dự án" để bắt đầu'}</p>
       </div>`;
       return;
     }
@@ -34,6 +41,15 @@ const Projects = (() => {
     list.innerHTML = filtered.map(p => buildProjectItem(p, q)).join('');
     attachListDragDrop();
     attachListActions();
+
+    // Re-render expanded bodies
+    setTimeout(() => {
+      expandedProjectIds.forEach(id => {
+        if (filtered.some(p => p.id === id)) {
+          renderProjectBody(id);
+        }
+      });
+    }, 0);
   }
 
   function buildProjectItem(p, q = '') {
@@ -47,43 +63,58 @@ const Projects = (() => {
       : '';
 
     const highlighted = q ? highlightText(p.name, q) : p.name;
+    const isExpanded = expandedProjectIds.includes(p.id);
+
+    // Get tags
+    const tags = (p.tagIds || []).map(id => DB.getTags().find(t => t.id === id)).filter(Boolean);
+    const tagChips = tags.map(t => `<span class="tag-chip" style="background:${t.color}15;color:${t.color};border-color:${t.color}30">${t.name}</span>`).join('');
 
     return `
-    <div class="project-item" data-id="${p.id}" draggable="true">
-      <div class="drag-handle">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="8" cy="6" r="1.5" fill="currentColor"/><circle cx="16" cy="6" r="1.5" fill="currentColor"/>
-          <circle cx="8" cy="12" r="1.5" fill="currentColor"/><circle cx="16" cy="12" r="1.5" fill="currentColor"/>
-          <circle cx="8" cy="18" r="1.5" fill="currentColor"/><circle cx="16" cy="18" r="1.5" fill="currentColor"/>
-        </svg>
-      </div>
-      <div class="project-color-bar" style="background:${p.color || '#6366f1'}"></div>
-      <div class="project-info">
-        <div class="project-name">${highlighted}</div>
-        <div class="project-desc">${p.desc || '<span style="color:var(--text-muted)">Không có mô tả</span>'}</div>
-      </div>
-      <div class="project-meta">
-        ${statusBadge(p.status || 'todo')}
-        ${priorityBadge(p.priority || 'low')}
-        ${members.length ? `<div class="project-members-stack">${memberAvatars}</div>` : ''}
-        <div class="project-progress">
-          <div class="project-progress-label">
-            <span>${taskCount} việc</span>
-            <span>${pct}%</span>
+    <div class="project-item ${isExpanded ? 'expanded' : ''}" id="project-item-${p.id}" data-id="${p.id}" draggable="true">
+      <div class="project-item-header" onclick="Projects.toggleExpand('${p.id}')">
+        <div class="drag-handle" onclick="event.stopPropagation()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="8" cy="6" r="1.5" fill="currentColor"/><circle cx="16" cy="6" r="1.5" fill="currentColor"/>
+            <circle cx="8" cy="12" r="1.5" fill="currentColor"/><circle cx="16" cy="12" r="1.5" fill="currentColor"/>
+            <circle cx="8" cy="18" r="1.5" fill="currentColor"/><circle cx="16" cy="18" r="1.5" fill="currentColor"/>
+          </svg>
+        </div>
+        <div class="project-color-bar" style="background:${p.color || '#6366f1'}"></div>
+        <div class="project-info">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <div class="project-name">${highlighted}</div>
+            ${p.department ? `<span class="dept-badge">${p.department}</span>` : ''}
+            ${tagChips ? `<div class="project-tags-list">${tagChips}</div>` : ''}
           </div>
-          <div class="progress-bar">
-            <div class="progress-fill" style="width:${pct}%;background:${p.color || '#6366f1'}"></div>
+          <div class="project-desc">${p.desc || '<span style="color:var(--text-muted)">Không có mô tả</span>'}</div>
+        </div>
+        <div class="project-meta" onclick="event.stopPropagation()">
+          ${statusBadge(p.status || 'todo')}
+          ${priorityBadge(p.priority || 'low')}
+          ${members.length ? `<div class="project-members-stack">${memberAvatars}</div>` : ''}
+          <div class="project-progress">
+            <div class="project-progress-label">
+              <span>${taskCount} việc</span>
+              <span>${pct}%</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill" style="width:${pct}%;background:${p.color || '#6366f1'}"></div>
+            </div>
+          </div>
+          ${dateRange ? `<div class="project-dates">${dateRange}</div>` : ''}
+          <svg class="project-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          <div class="project-actions">
+            <button class="btn-icon" data-action="edit" data-id="${p.id}" title="Chỉnh sửa">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+            <button class="btn-icon danger" data-action="delete" data-id="${p.id}" title="Xóa">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+            </button>
           </div>
         </div>
-        ${dateRange ? `<div class="project-dates">${dateRange}</div>` : ''}
-        <div class="project-actions">
-          <button class="btn-icon" data-action="edit" data-id="${p.id}" title="Chỉnh sửa">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-          </button>
-          <button class="btn-icon danger" data-action="delete" data-id="${p.id}" title="Xóa">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-          </button>
-        </div>
+      </div>
+      <div class="project-item-body" id="project-body-${p.id}" onclick="event.stopPropagation()">
+        <!-- Tasks details rendered here -->
       </div>
     </div>`;
   }
@@ -207,6 +238,7 @@ const Projects = (() => {
     document.getElementById('projectId').value = '';
     document.getElementById('projectName').value = '';
     document.getElementById('projectDesc').value = '';
+    document.getElementById('projectDepartment').value = '';
     document.getElementById('projectStatus').value = 'todo';
     document.getElementById('projectPriority').value = 'urgent-important';
     document.getElementById('projectStart').value = '';
@@ -215,6 +247,7 @@ const Projects = (() => {
     updateColorPicker('projectColorPicker', selectedColor);
     document.getElementById('projectColor').value = selectedColor;
     buildMemberCheckboxes([]);
+    buildTagCheckboxes('projectTagCheckboxes', 'proj-tags', []);
     openModal('projectModal');
     setTimeout(() => document.getElementById('projectName').focus(), 100);
   }
@@ -227,6 +260,7 @@ const Projects = (() => {
     document.getElementById('projectId').value = p.id;
     document.getElementById('projectName').value = p.name;
     document.getElementById('projectDesc').value = p.desc || '';
+    document.getElementById('projectDepartment').value = p.department || '';
     document.getElementById('projectStatus').value = p.status || 'todo';
     document.getElementById('projectPriority').value = p.priority || 'low';
     document.getElementById('projectStart').value = p.startDate || '';
@@ -235,6 +269,7 @@ const Projects = (() => {
     updateColorPicker('projectColorPicker', selectedColor);
     document.getElementById('projectColor').value = selectedColor;
     buildMemberCheckboxes(p.memberIds || []);
+    buildTagCheckboxes('projectTagCheckboxes', 'proj-tags', p.tagIds || []);
     openModal('projectModal');
   }
 
@@ -254,21 +289,40 @@ const Projects = (() => {
       </label>`).join('');
   }
 
+  function buildTagCheckboxes(containerId, nameAttr, selectedIds = []) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const tags = DB.getTags();
+    if (!tags.length) {
+      container.innerHTML = `<div class="empty-state-mini">Chưa có thẻ. Tạo thẻ trong mục Quản lý thẻ.</div>`;
+      return;
+    }
+    container.innerHTML = tags.map(tag => `
+      <label class="tag-checkbox-item">
+        <input type="checkbox" name="${nameAttr}" value="${tag.id}" ${selectedIds.includes(tag.id) ? 'checked' : ''} />
+        <span class="tag-chip" style="background:${tag.color}15;color:${tag.color};border-color:${tag.color}30">${tag.name}</span>
+      </label>
+    `).join('');
+  }
+
   function saveProject() {
     const name = document.getElementById('projectName').value.trim();
     if (!name) { showToast('Vui lòng nhập tên dự án!', 'error'); return; }
 
     const memberIds = [...document.querySelectorAll('#projectMemberCheckboxes input:checked')].map(i => i.value);
+    const tagIds = [...document.querySelectorAll('#projectTagCheckboxes input:checked')].map(i => i.value);
 
     const data = {
       name,
       desc: document.getElementById('projectDesc').value.trim(),
+      department: document.getElementById('projectDepartment').value.trim(),
       status: document.getElementById('projectStatus').value,
       priority: document.getElementById('projectPriority').value,
       startDate: document.getElementById('projectStart').value,
       endDate: document.getElementById('projectEnd').value,
       color: document.getElementById('projectColor').value,
       memberIds,
+      tagIds,
     };
 
     if (editingId) {
@@ -319,7 +373,6 @@ const Projects = (() => {
     });
   }
 
-  // Update filter dropdowns in Tasks view
   function updateFilterDropdowns() {
     const projects = DB.getProjects();
     const selects = [document.getElementById('taskFilterProject'), document.getElementById('taskProject')];
@@ -337,6 +390,203 @@ const Projects = (() => {
       });
       if (val) sel.value = val;
     });
+
+    updateDeptFilters();
+  }
+
+  function updateDeptFilters() {
+    const projects = DB.getProjects();
+    const depts = [...new Set(projects.map(p => p.department).filter(Boolean))];
+
+    // Update Project filter
+    const projDeptSel = document.getElementById('projectFilterDepartment');
+    if (projDeptSel) {
+      const val = projDeptSel.value;
+      projDeptSel.innerHTML = '<option value="">Tất cả phòng ban</option>';
+      depts.forEach(d => {
+        const opt = document.createElement('option');
+        opt.value = d;
+        opt.textContent = d;
+        projDeptSel.appendChild(opt);
+      });
+      if (depts.includes(val)) projDeptSel.value = val;
+    }
+
+    // Update Tasks filter
+    const taskDeptSel = document.getElementById('taskFilterDepartment');
+    if (taskDeptSel) {
+      const val = taskDeptSel.value;
+      taskDeptSel.innerHTML = '<option value="">Tất cả phòng ban</option>';
+      depts.forEach(d => {
+        const opt = document.createElement('option');
+        opt.value = d;
+        opt.textContent = d;
+        taskDeptSel.appendChild(opt);
+      });
+      if (depts.includes(val)) taskDeptSel.value = val;
+    }
+
+    // Update Members filter
+    const memDeptSel = document.getElementById('memberFilterDepartment');
+    if (memDeptSel) {
+      const val = memDeptSel.value;
+      memDeptSel.innerHTML = '<option value="">Tất cả phòng ban</option>';
+      const memDepts = [...new Set(DB.getMembers().map(m => m.department).filter(Boolean))];
+      memDepts.forEach(d => {
+        const opt = document.createElement('option');
+        opt.value = d;
+        opt.textContent = d;
+        memDeptSel.appendChild(opt);
+      });
+      if (memDepts.includes(val)) memDeptSel.value = val;
+    }
+  }
+
+  // Expanded project tasks rendering
+  function toggleExpand(id) {
+    const idx = expandedProjectIds.indexOf(id);
+    if (idx === -1) {
+      expandedProjectIds.push(id);
+      document.getElementById(`project-item-${id}`)?.classList.add('expanded');
+      renderProjectBody(id);
+    } else {
+      expandedProjectIds.splice(idx, 1);
+      document.getElementById(`project-item-${id}`)?.classList.remove('expanded');
+    }
+  }
+
+  function renderProjectBody(projectId) {
+    const bodyEl = document.getElementById(`project-body-${projectId}`);
+    if (!bodyEl) return;
+
+    const project = getProjectById(projectId);
+    const tasks = DB.getTasks().filter(t => t.projectId === projectId);
+
+    const viewOpts = DB.getSetting('projectColumns', {
+      assignee: true,
+      status: true,
+      priority: true,
+      tags: true,
+      dueDate: true,
+      estimate: true
+    });
+
+    if (!tasks.length) {
+      bodyEl.innerHTML = `
+        <div class="empty-state-mini" style="margin-top:10px">Không có công việc nào thuộc dự án này</div>
+        <button class="proj-add-task-btn" onclick="Projects.quickAddTask('${projectId}')">+ Thêm công việc mới</button>
+      `;
+      return;
+    }
+
+    const colSelectHtml = `
+      <div class="column-selector-panel">
+        <span style="font-weight:600;font-size:12px;color:var(--text-secondary)">Tùy chọn cột:</span>
+        <label><input type="checkbox" data-col="assignee" ${viewOpts.assignee ? 'checked' : ''} /> Người thực hiện</label>
+        <label><input type="checkbox" data-col="status" ${viewOpts.status ? 'checked' : ''} /> Trạng thái</label>
+        <label><input type="checkbox" data-col="priority" ${viewOpts.priority ? 'checked' : ''} /> Độ ưu tiên</label>
+        <label><input type="checkbox" data-col="tags" ${viewOpts.tags ? 'checked' : ''} /> Thẻ</label>
+        <label><input type="checkbox" data-col="dueDate" ${viewOpts.dueDate ? 'checked' : ''} /> Hạn chót</label>
+        <label><input type="checkbox" data-col="estimate" ${viewOpts.estimate ? 'checked' : ''} /> Ước tính</label>
+      </div>
+    `;
+
+    const tableHeaders = `
+      <th>Tên công việc</th>
+      ${viewOpts.assignee ? '<th>Người thực hiện</th>' : ''}
+      ${viewOpts.status ? '<th>Trạng thái</th>' : ''}
+      ${viewOpts.priority ? '<th>Độ ưu tiên</th>' : ''}
+      ${viewOpts.tags ? '<th>Thẻ</th>' : ''}
+      ${viewOpts.dueDate ? '<th>Hạn chót</th>' : ''}
+      ${viewOpts.estimate ? '<th>Ước tính</th>' : ''}
+      <th>Thao tác</th>
+    `;
+
+    const tableRows = tasks.map(t => {
+      const assignee = t.assigneeId ? getMemberById(t.assigneeId) : null;
+      const taskTags = (t.tagIds || []).map(tid => DB.getTags().find(tag => tag.id === tid)).filter(Boolean);
+      const tagChipsHtml = taskTags.map(tag => `<span class="tag-chip" style="background:${tag.color}15;color:${tag.color};border-color:${tag.color}30">${tag.name}</span>`).join('');
+      const overdue = t.dueDate && isOverdue(t.dueDate) && t.status !== 'done';
+
+      return `
+        <tr>
+          <td style="font-weight:500;">
+            <span class="task-checkbox ${t.status === 'done' ? 'done' : ''}" style="display:inline-block;vertical-align:middle;margin-right:8px;cursor:pointer" onclick="Projects.toggleTaskDone('${t.id}', '${projectId}')"></span>
+            <span class="${t.status === 'done' ? 'done' : ''}" style="vertical-align:middle;">${t.name}</span>
+          </td>
+          ${viewOpts.assignee ? `<td>${assignee ? memberAvatar(assignee) + ` <span style="font-size:12px;margin-left:5px">${assignee.name}</span>` : '<span class="text-muted">Chưa phân công</span>'}</td>` : ''}
+          ${viewOpts.status ? `<td>${statusBadge(t.status || 'todo')}</td>` : ''}
+          ${viewOpts.priority ? `<td>${priorityBadge(t.priority || 'low')}</td>` : ''}
+          ${viewOpts.tags ? `<td>${tagChipsHtml || '<span class="text-muted">–</span>'}</td>` : ''}
+          ${viewOpts.dueDate ? `<td class="${overdue ? 'overdue' : ''}">${t.dueDate ? fmtDate(t.dueDate) : '<span class="text-muted">–</span>'}</td>` : ''}
+          ${viewOpts.estimate ? `<td>${t.estimate ? t.estimate + 'h' : '<span class="text-muted">–</span>'}</td>` : ''}
+          <td>
+            <div style="display:flex;gap:5px;">
+              <button class="btn-icon" onclick="Projects.editTask('${t.id}')" title="Sửa">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </button>
+              <button class="btn-icon danger" onclick="Projects.deleteTask('${t.id}')" title="Xóa">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    bodyEl.innerHTML = `
+      ${colSelectHtml}
+      <div class="project-task-table-container">
+        <table class="project-task-table">
+          <thead>
+            <tr>${tableHeaders}</tr>
+          </thead>
+          <tbody>
+            ${tableRows}
+          </tbody>
+        </table>
+      </div>
+      <button class="proj-add-task-btn" onclick="Projects.quickAddTask('${projectId}')">+ Thêm công việc mới</button>
+    `;
+
+    // Attach listener to checkboxes
+    bodyEl.querySelectorAll('.column-selector-panel input[type="checkbox"]').forEach(chk => {
+      chk.addEventListener('change', () => {
+        const col = chk.dataset.col;
+        viewOpts[col] = chk.checked;
+        DB.setSetting('projectColumns', viewOpts);
+        renderProjectBody(projectId);
+      });
+    });
+  }
+
+  function quickAddTask(projectId) {
+    if (typeof Tasks !== 'undefined') {
+      Tasks.openAdd({ projectId });
+    }
+  }
+
+  function editTask(taskId) {
+    if (typeof Tasks !== 'undefined') {
+      Tasks.openEditById(taskId);
+    }
+  }
+
+  function deleteTask(taskId) {
+    if (typeof Tasks !== 'undefined') {
+      Tasks.deleteTaskById(taskId);
+    }
+  }
+
+  function toggleTaskDone(taskId, projectId) {
+    const t = DB.getTasks().find(t => t.id === taskId);
+    if (!t) return;
+    const newStatus = t.status === 'done' ? 'todo' : 'done';
+    DB.updateTask(taskId, { status: newStatus });
+    renderProjectBody(projectId);
+    if (typeof Tasks !== 'undefined') Tasks.render();
+    if (typeof Dashboard !== 'undefined') Dashboard.render();
+    if (typeof Matrix !== 'undefined') Matrix.render();
   }
 
   // ---- Init ----
@@ -349,6 +599,11 @@ const Projects = (() => {
     document.getElementById('cancelConfirmModal').addEventListener('click', () => closeModal('confirmModal'));
 
     initColorPicker('projectColorPicker', 'projectColor');
+
+    const projDeptSel = document.getElementById('projectFilterDepartment');
+    if (projDeptSel) {
+      projDeptSel.addEventListener('change', render);
+    }
 
     // Tab switching
     document.querySelectorAll('#view-projects .tab-btn').forEach(btn => {
@@ -363,5 +618,17 @@ const Projects = (() => {
     });
   }
 
-  return { init, render, openAdd, openEdit, updateFilterDropdowns };
+  return {
+    init,
+    render,
+    openAdd,
+    openEdit,
+    updateFilterDropdowns,
+    toggleExpand,
+    renderProjectBody,
+    quickAddTask,
+    editTask,
+    deleteTask,
+    toggleTaskDone
+  };
 })();
